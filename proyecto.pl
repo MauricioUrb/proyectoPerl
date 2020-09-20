@@ -1,4 +1,7 @@
 #!/usr/bin/perl
+
+use Config::Tiny;
+
 =begin comment
 ^\w{3} [ :0-9]{11} [._[:alnum:]-]+ courierpop3login: (Connection|Disconnected), ip=\[[.:[:alnum:]]+\]$
 ^\w{3} [ :0-9]{11} [._[:alnum:]-]+ courierpop3login: LOGIN, user=[-_.@[:alnum:]]+, ip=\[[.:[:alnum:]]+\], port=\[[0-9]+\]$
@@ -12,47 +15,14 @@ Sep 19 19:28:37 malware-virtual-machine imapd: LOGOUT, user=mauricio, ip=[::ffff
 #use DateTime;
 
 $archivoConf = "courier-pop_eq7.conf";
-$activar = 1;
-open (CONF, "<", $archivoConf) or die $!;
-#leer archivo de configuracion para iniciar el servicio ???
-while (<CONF>) {
-	if (index($_, "# configuraciones generales del programa en Perl (courier pop)") != -1){
-		$activar = 0;
-	}
-	if($activar){
-		next;
-	}
-	if (index($_,"log = ") != -1){
-		chop $_;
-		$logFile = substr ($_,6);
-	}
-	if (index($_,"# configuración de servicio a monitorear") != -1){ last; }
-}
-
-#monitorear servicio
-while (<CONF>) {
-	if (index($_,"enable = ") != -1){
-		chop $_;
-		$enable = substr ($_,9);
-	} elsif (index($_,"log = ") != -1){
-		chop $_;
-		$log = substr ($_,6);
-	} elsif (index($_,"filter = ") != -1){
-		chop $_;
-		$filter = substr ($_,9);
-	} elsif (index($_,"attempts = ") != -1){
-		chop $_;
-		$attempts = substr ($_,11);
-	} elsif (index($_,"time = ") != -1){
-		$tmp = chop $_;
-		$time = substr ($_,7);
-		if ($tmp ne "\n"){
-			$time .= $tmp;
-		}
-	}
-}
-
-close(CONF);
+$config = Config::Tiny->read($archivoConf);
+ 
+$logFile  = $config->{courierPop_eq7}{log};
+$enable   = $config->{courierPop}{enable};
+$log 	  = $config->{courierPop}{log};
+$filter   = $config->{courierPop}{filter};
+$attempts = $config->{courierPop}{attempts};
+$time 	  = $config->{courierPop}{time};
 
 =begin comment
 
