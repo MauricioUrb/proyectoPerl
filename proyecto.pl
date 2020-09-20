@@ -65,7 +65,6 @@ print $time,"\n";
 
 =cut
 
-#$Fleer = "Sep 19 19:28:37";
 sub ordenFecha {
 	@tmpTime = split(/\s/,$_[0]);
 	@tmpHora = split(/:/,$tmpTime[2]);
@@ -95,28 +94,62 @@ sub ordenFecha {
 		$tmpTime[0] = 12;
 	}
 	@n_Formato = ($tmpTime[0], $tmpTime[1],$tmpHora[0],$tmpHora[1],$tmpHora[2]);
-	return @n_Formato;
+	foreach my $dato (@n_Formato) {
+		if (length($dato) eq 1){
+			$dato = "0" . $dato;
+		}
+	}
+	my $fechaN = join("",@n_Formato);
+	return $fechaN;
 }
 
 ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-@hoy = ($mon,$mday,$hour,$min$sec);
+@hoy = ($mon + 1,$mday,$hour,$min,$sec);
+foreach my $dato (@hoy) {
+	if (length($dato) eq 1){
+		$dato = "0" . $dato;
+	}
+}
+$fechaHoy = join("",@hoy);
+#print $fechaHoy,"\n\n\n";
 $omitir = 1;
+=begim comment
+# Pruebas de comparar fechas
+$Fleer = "Sep 19 19:28:37";
+$Fleer = ordenFecha($Fleer);
+print "$Fleer\t$fechaHoy\n";
+#Primero se compara fecha
+if (int($Fleer) >= int($fechaHoy)){
+	print "ok\n";
+}
+
+$Fleer = "Nov 9 9:8:7";
+$Fleer = ordenFecha($Fleer);
+print "$Fleer\t$fechaHoy\n";
+#Primero se compara fecha
+if (int($Fleer) >= int($fechaHoy)){
+	print "ok\n";
+}
+=cut
 $archivoLogs = "/var/log/mail.log"; #También puede ser /var/log/mail.log.1 , no de qué dependa, al inicio fue en .1, cuando use telnet ya fue el mail.log :S
 #=begin comment
 open (LOGF, "<", $archivoLogs) or die $!;
 
 while (<LOGF>) {
+	#Se obtien la fecha y hora del log
 	$Fleer = substr $_, 0, 15;
-	@horaLeida = ordenFecha($Fleer);
-	for($i = 0; $i < scalar @hoy; $i++){ ################ Estoy viendo esto de las comparaciones de fechas
-		if ($horaLeida[$i] < $hoy[$i]){
+	$Fleer = ordenFecha($Fleer);
+	if ($omitir){
+		#Primero se compara fecha
+		if (int($Fleer) >= int($fechaHoy)){
+			#Si se llega al punto en donde las fechas ya son válidas, entonces omitimos estas comparaciones
 			$omitir = 0;
-			last;
+		} else {
+			#Mientras las fechas sean menores, seguimos omitiendo las líneas
+			next;
 		}
 	}
-	if ($omitir){
-		next;
-	}
+	#Empieza la comparación de los logs
 	if ($_ =~ /^\w{3} [ :0-9]{11} [._[:alnum:]-]+ imapd: (Connection|Disconnected), ip=\[[.:[:alnum:]]+\]$/){
 		print $_;
 	}
