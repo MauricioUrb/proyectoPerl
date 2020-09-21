@@ -112,21 +112,25 @@ $archivoLogs = "/var/log/mail.log"; #También puede ser /var/log/mail.log.1 , no
 @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
 #=begin comment
 $globalYear = 0;
-while(1){
+if ($ARGV[$#ARGV] eq "start"){
+	while(1){
 	#Se calcula la fecha de hoy
-	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-	$fechaGlobal = ($year+1900)." ".($mon+1)." ".$mday." ".$hour.":".$min.":".$sec;
-	$globalYear = $year+1900;
-	open (LOGF, "<", $archivoLogs) or die $!;
+		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+		$fechaGlobal = ($year+1900)." ".($mon+1)." ".$mday." ".$hour.":".$min.":".$sec;
+		$globalYear = $year+1900;
+		open (LOGF, "<", $archivoLogs) or die $!;
 	# Se limpia el arreglo
-	@registros = ();
+		@registros = ();
 	#Apertura de archivo de logs
-	while (<LOGF>) {
+		while (<LOGF>) {
 		#Agregamos al arreglo y mandamos a la función
-		chomp $_;
-		push @registros, $_;
-	}
+			chomp $_;
+			push @registros, $_;
+		}
 	close(LOGF);
 	analisis(@registros);
+	}
+} elsif($ARGV[$#ARGV] =~ /\d+/{
+	print `sudo iptables -D INPUT -s $ARGV[$#ARGV] -j DROP`;
 }
 #=cut

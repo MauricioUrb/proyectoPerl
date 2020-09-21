@@ -14,17 +14,17 @@
 case "$1" in
   start)
     echo "Starting log-block"
-    sudo perl proyecto.pl start
+    sudo perl log-block.pl start
     echo "Start Successfull
     ;;
   stop)
     echo "Stopping Foo..."
-    sudo perl proyecto.pl stop
+    sudo perl log-block.pl.pl stop
     echo "Stopped Successfull"
     sleep 2
     ;;
   *)
-    echo "Usage: /etc/init.d/foo {start|stop}"
+    echo "Usage: /etc/init.d/log-block {start|stop}"
     exit 1
     ;;
 esac
