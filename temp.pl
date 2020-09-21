@@ -4,17 +4,7 @@ use Config::Tiny;
 use Time::Local;
 use List::MoreUtils qw(first_index);
 use Data::Dumper;
-
-=begin comment
-^\w{3} [ :0-9]{11} [._[:alnum:]-]+ courierpop3login: (Connection|Disconnected), ip=\[[.:[:alnum:]]+\]$
-^\w{3} [ :0-9]{11} [._[:alnum:]-]+ courierpop3login: LOGIN, user=[-_.@[:alnum:]]+, ip=\[[.:[:alnum:]]+\], port=\[[0-9]+\]$
-^\w{3} [ :0-9]{11} [._[:alnum:]-]+ courierpop3login: (LOGOUT|TIMEOUT|DISCONNECTED), user=[-_.@[:alnum:]]+, ip=\[[.:[:alnum:]]+\], port=\[[0-9]+\], top=[0-9]+, retr=[0-9]+, rcvd=[0-9]+, sent=[0-9]+, time=[0-9]+(, stls=1)?$
-
-
-Sep 19 19:28:36 malware-virtual-machine imapd: Connection, ip=[::ffff:127.0.0.1]
-Sep 19 19:28:37 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP
-Sep 19 19:28:37 malware-virtual-machine imapd: LOGOUT, user=mauricio, ip=[::ffff:127.0.0.1], headers=184, body=0, rcvd=294, sent=1364, time=0
-=cut
+use Try::Tiny;
 
 $archivoConf = "courier-pop_eq7.conf";
 $config = Config::Tiny->read($archivoConf);
@@ -26,7 +16,6 @@ $filter   = $config->{courierPop}{filter};
 $attempts = $config->{courierPop}{attempts};
 $time 	  = $config->{courierPop}{time};
 
-#Pruebas
 @registros = ("Jan 06 09:18:17 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
 "Jul 10 10:08:22 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
 "Jul 10 10:08:22 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
@@ -73,6 +62,8 @@ foreach $key (keys %hosts){
 	}
 }
 
+#print Dumper (\%hosts);
+
 sub epoch{
 	$fecha = shift;
 	@months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
@@ -92,66 +83,15 @@ sub bloqueo{
 	$save = `sudo /sbin/iptables-save`;
 }
 
-#Apertura de archivo de logs
-
-$archivoLogs = "/var/log/mail.log"; #También puede ser /var/log/mail.log.1 , no de qué dependa, al inicio fue en .1, cuando use telnet ya fue el mail.log :S
-#=begin comment
-open (LOGF, "<", $archivoLogs) or die $!;
-
-while (<LOGF>) {
-	#Se obtien la fecha y hora del log
-	$Fleer = substr $_, 0, 15;
-	$Fleer = ordenFecha($Fleer);
-	if ($omitir){
-		#Primero se compara fecha
-		if (int($Fleer) >= int($fechaHoy)){
-			#Si se llega al punto en donde las fechas ya son válidas, entonces omitimos estas comparaciones
-			$omitir = 0;
-		} else {
-			#Mientras las fechas sean menores, seguimos omitiendo las líneas
-			next;
-		}
-	}
-	#Empieza la comparación de los logs
-	if ($_ =~ /^\w{3} [ :0-9]{11} [._[:alnum:]-]+ imapd: (Connection|Disconnected), ip=\[[.:[:alnum:]]+\]$/){
-		print $_;
-	}
-}
-
-close(LOGF);
-#=cut
 =begin comment
-use Socket;
-my $port = shift or die "no port specified";
-my $proto = getprotobyname('tcp');
-my $sysname = `uname -n`;
 
-# create socket
-socket(SERVER, PF_INET, SOCK_STREAM, $proto) or die "socket: $!";
-setsockopt(SERVER, SOL_SOCKET, SO_REUSEADDR, 1) or die "setsock: $!";
+unless(exists($hashCorreos{"$2"})){
+			$hashCorreos{"$2"} = $&;
+		}else{
+			#Si existe, se obtiene el valor actual de la llave y se le concatena la direccion de correo
+			$valor = $hashCorreos{"$2"};
+			$hashCorreos{"$2"} = "$valor $&";
+		}
 
-# local port
-my $paddr = sockaddr_in($port, INADDR_ANY);
 
-# bind and listen
-bind(SERVER, $paddr) or die "bind: $!";
-listen(SERVER, SOMAXCONN) or die "listen: $!";
-print "SERVER started on port $port ";
-
-# accepting a connection
-my $client_addr;
-while ($client_addr = accept(CLIENT, SERVER))
-{
-# who is connecting?
-my ($client_port, $client_ip) = sockaddr_in($client_addr);
-my $client_ipnum = inet_ntoa($client_ip);
-print "connection from: $client_ipnum";
-
-# print message, close connection
-print CLIENT "------------------------------\n";
-print CLIENT "You have connected to $sysname";
-print CLIENT "------------------------------\n";
-#close CLIENT;
-}
-close CLIENT;
 =cut
