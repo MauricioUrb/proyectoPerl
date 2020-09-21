@@ -103,3 +103,98 @@ if($enable eq "yes"){
 }else{
 	print "El servicio no se encuentra habilitado en el archivo de configuración\n";
 }
+
+=head1 Documentacion courier-pop_eq7.pl
+
+=cut
+
+=head2 Generalidades del programa 
+
+=over 
+
+=item * La lectura de registros del log indicado se realiza a partir de la fecha actual menos el tiempo establecido en el archivo de configuración. 
+
+Por ejemplo:
+Si se establecio el tiempo en 60, el servicio se ejecuta cada 60 segundos y empieza a leer los registros de la hora actual menos los 60 segundos establecidos.
+
+=item * Se ejecuta la herramienta cada n tiempo, este tiempo es establecido en el archivo de configuración.
+
+=item * Para los cálculos con fechas estas se convierten en formato epoch ya que solamente se restan los segundos.
+
+=item * Las direcciones IP tienen un bloqueo desde el momento que fueron detectadas hasta las 23:59 UTC.
+
+=back
+
+=cut
+
+=head2 Archivo de configuración
+
+Se utilizó el módulo Config::Tiny para realizar el parse de los valores establecidos en el archivo courier-pop_eq7.conf.
+
+=cut
+
+=head2 Conversión a epoch
+
+Esta es una función auxiliar ya que se estableció que las fechas serían tratadas en este formato para poder realizar los cálculos en validaciones. 
+
+=cut
+
+=head2 Main
+
+Como ya se había mencionado, la herramienta se ejecuta cada n tiempo:
+
+=over 
+
+=item * Se verifica si se activó el servicio en el archivo de configuración para proceder a realizar el análisis de las peticiones entrantes.
+
+=item * Se verifica si existe la carpeta courier-pop_e7, de lo contrario la crea igual que al archivo que se ocupará como log del servicio.
+
+=item * Se obtiene la fecha actual con ayuda de la funfión localtime().
+
+=item * Se abre el archivo especificado donde se encuentran las bitácoras de courier-pop y se valida que sean conexiones o intentos de conexiones.
+
+=item * Los registros que pasen la validación, se agregan a un arreglo para posteriormente ser enviado a la función analisis().
+
+=back
+
+=cut
+
+=head2 Análisis
+
+=over
+
+=item * Se itera cada registro y se obtiene únicamente la fecha y la dirección IP.
+
+=item * Se realiza la validación de que ese registro no debe ser mayor a la fecha actual pero sí a la fecha actual menos el tiempo establecido en el archivo de configuración.
+
+=item * Se crea un diccionario donde cada llave es la dirección IP y los valores son las fechas donde se realizaron intentos de conexiones.
+
+Si el diccionario no existe se crea con la llave correspondiente , de lo contrario se recupera el valor de la llave y se le anexa una nueva fecha.
+
+=item * Al terminar la asignación de llave-valor, se itera cada llave y se realiza un split para poder hacer el conteo de los elementos. Si el número de intentos es mayor o igual al límite establecido, se llama a la función bloqueo() para que la dirección IP sea bloqueada.
+
+=back
+
+=cut
+
+=head2 Bloqueo de Ip's
+
+=back
+
+=item * Como la dirección que es mandada a la función contiene IPv4 e IPv6 se realiza un parse de ambos protocolos.
+
+=item * Se realiza el bloqueo de la dirección IP con ambos protocolos desde el momento en que se detectan hasta las 23:59 UTC.
+
+=item * El bloqueo es registrado en el log establecido.
+
+=over
+
+=cut
+
+=head2 La herramienta como servicio
+
+Se utilizó el módulo Daemon::Control para poder ejecutarlo en segundo plano.
+
+Se anexa a la bitácora la fecha de start y stop del servicio.
+
+=cut
