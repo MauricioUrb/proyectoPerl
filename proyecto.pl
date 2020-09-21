@@ -49,14 +49,15 @@ sub analisis {
 		$registro =~ m#([A-Z][a-z]+ \d+ \d+:\d+:\d+).*\[(.*:\d+\.\d+\.\d+\.\d+)\]#;
 		#$1 -> Fecha
 		#$2 -> IP
-		if(epoch($1) >= (time - $time) && time > epoch($1)){
+		#print epoch($1), "->", (time - $time), "\n";
+		#if(epoch($1) >= time - $time){
 			unless(exists($hosts{"$2"})){
 				$hosts{"$2"} = epoch($1);
 			}else{
 				$valor = $hosts{"$2"};
 				$hosts{"$2"} = "$valor ".epoch($1);
 			}
-		}
+		#}
 	}
 
 	foreach $key (keys %hosts){
@@ -120,13 +121,32 @@ while(1){
 	open (LOGF, "<", $archivoLogs) or die $!;
 	# Se limpia el arreglo
 	@registros = ();
+	#open(CONTADOR, "<", "contador.txt");
+	#chomp($ultimoRegistro = <CONTADOR>);
+	#close CONTADOR;
 	#Apertura de archivo de logs
 	while (<LOGF>) {
-		#Agregamos al arreglo y mandamos a la función
-		chomp $_;
-		push @registros, $_;
+		#$contador ++;
+		#if($contador > $ultimoRegistro){
+			#Agregamos al arreglo y mandamos a la función
+		<LOGF> =~ m#([A-Z][a-z]+ \d+ \d+:\d+:\d+).*\[(.*:\d+\.\d+\.\d+\.\d+)\]#;
+		print epoch($1), "-",time - $time ,"\n";
+		print "$1\n$fechaGlobal\n";
+		if(epoch($1) >= time){
+			chomp $_;
+			push @registros, $_;
+		}
+	}
+	for $registro (@registros){
+	
+		print "$registro\n";
 	}
 	close(LOGF);
 	analisis(@registros);
+	#$ultimoRegistro = $contador;
+	#open(CONTADOR, "+>", "contador.txt");
+	#print CONTADOR $ultimoRegistro;
+	#close CONTADOR;
+	exit;
 }
 #=cut
