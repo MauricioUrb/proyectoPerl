@@ -53,24 +53,20 @@ sub bloqueo{
 	$ip =~ m#(.*):(\d+\.\d+\.\d+\.\d+)#;
 	#$1 -> IPv6
 	#$2 -> IPv4
-	$check_ipv6 = `sudo ip6tables -C INPUT -s $1 -j DROP`;
-	$check_ipv4 = `sudo iptables -C INPUT -s $2 -j DROP`;
-	unless($check_ipv6 or $check_ipv4){
-		$block_ipv6 = `sudo ip6tables -A INPUT -s $1 -j DROP`;
-		$save_ipv6 = `sudo /sbin/ip6tables-save`;
-		$block_ipv4 = `sudo iptables -A INPUT -s $2 -j DROP`;
-		$save_ipv4 = `sudo /sbin/iptables-save`;
-		print "$fechaGlobal  Se bloqueó la ip: $ip\n";
-		print REGLOG "$fechaGlobal  Se bloqueó la ip: $ip\n";
-	}
+	#Se bloquea la IP hasta las 23:59 UTC del dia en que se detectó 
+	$block_ipv6 = `sudo ip6tables -A INPUT -s $1 -j DROP -m time --timestart $globalHour:$globalMin --timestop 23:59`;
+	$save_ipv6 = `sudo /sbin/ip6tables-save`;
+	$block_ipv4 = `sudo iptables -A INPUT -s $2 -j DROP -m time --timestart $globalHour:$globalMin --timestop 23:59`;
+	$save_ipv4 = `sudo /sbin/iptables-save`;
+	print "$fechaGlobal  Se bloqueó la ip: $ip\n";
+	print REGLOG "$fechaGlobal  Se bloqueó la ip: $ip\n";
 }
 
 ################################################################################################################################
 
 #MAIN
 
-$archivoLogs = "/var/log/mail.log"; #También puede ser /var/log/mail.log.1 , no de qué dependa, al inicio fue en .1, cuando use telnet ya fue el mail.log :S
-#$archivoLogs = $ARGV[0];
+$archivoLogs = "/var/log/mail.log";
 $fechaGlobal = "";
 @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
 $globalYear = 0;
@@ -88,7 +84,7 @@ while(1){
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
 	$fechaGlobal = ($year+1900)." ".($mon+1)." ".$mday." ".$hour.":".$min.":".$sec;
 	$globalYear = $year+1900;
-	$globalHour = $hour;
+	$globalHour = $hour+5;
 	$globalMin = $min;
 	print REGLOG "$fechaGlobal Se ha iniciado el servicio\n";
 	open (LOGF, "<", $archivoLogs) or die $!;
