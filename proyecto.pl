@@ -115,8 +115,8 @@ $globalYear = 0;
 while(1){
 	#Se calcula la fecha de hoy
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-	$fechaGlobal = $year . " " . $mon + 1 . " " . $mday . " " . $hour . ":" . $min . ":" . $sec;
-	$globalYear = $year;
+	$fechaGlobal = ($year+1900)." ".($mon+1)." ".$mday." ".$hour.":".$min.":".$sec;
+	$globalYear = $year+1900;
 	open (LOGF, "<", $archivoLogs) or die $!;
 	# Se limpia el arreglo
 	@registros = ();
