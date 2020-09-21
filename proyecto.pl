@@ -65,42 +65,45 @@ sub bloqueo{
 ################################################################################################################################
 
 #MAIN
-
-$archivoLogs = "/var/log/mail.log";
-$fechaGlobal = "";
-@months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
-$globalYear = 0;
-$globalHour = 0;
-$globalMin = 0;
-while(1){
-	unless (-d "/var/log/courier-pop_eq7"){
-		system("sudo mkdir /var/log/courier-pop_eq7");
-		system("sudo chmod 777 /var/log/courier-pop_eq7");
-		system("sudo touch /var/log/courier-pop_eq7/courier-pop_eq7.log");
-		system("sudo chmod 777 /var/log/courier-pop_eq7/courier-pop_eq7.log");
-	}
-	open (REGLOG, ">>", "/var/log/courier-pop_eq7/courier-pop_eq7.log") or die $!;
-	#Se calcula la fecha de hoy
-	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-	$fechaGlobal = ($year+1900)." ".($mon+1)." ".$mday." ".$hour.":".$min.":".$sec;
-	$globalYear = $year+1900;
-	$globalHour = $hour+5;
-	$globalMin = $min;
-	print REGLOG "$fechaGlobal Se ha iniciado el servicio\n";
-	open (LOGF, "<", $archivoLogs) or die $!;
-	# Se limpia el arreglo
-	@registros = ();
-	#Apertura de archivo de logs
-	while (<LOGF>) {
-		#Agregamos al arreglo y mandamos a la función
-		chomp $_;
-		if ($_ =~ /imapd: LOGIN/){
-			push @registros, $_;
+if($enable eq "yes"){
+	$archivoLogs = "/var/log/mail.log";
+	$fechaGlobal = "";
+	@months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+	$globalYear = 0;
+	$globalHour = 0;
+	$globalMin = 0;
+	while(1){
+		unless (-d "/var/log/courier-pop_eq7"){
+			system("sudo mkdir /var/log/courier-pop_eq7");
+			system("sudo chmod 777 /var/log/courier-pop_eq7");
+			system("sudo touch /var/log/courier-pop_eq7/courier-pop_eq7.log");
+			system("sudo chmod 777 /var/log/courier-pop_eq7/courier-pop_eq7.log");
 		}
+		open (REGLOG, ">>", "/var/log/courier-pop_eq7/courier-pop_eq7.log") or die $!;
+		#Se calcula la fecha de hoy
+		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+		$fechaGlobal = ($year+1900)." ".($mon+1)." ".$mday." ".$hour.":".$min.":".$sec;
+		$globalYear = $year+1900;
+		$globalHour = $hour+5;
+		$globalMin = $min;
+		#print REGLOG "$fechaGlobal Se ha iniciado el servicio\n";
+		open (LOGF, "<", $archivoLogs) or die $!;
+		# Se limpia el arreglo
+		@registros = ();
+		#Apertura de archivo de logs
+		while (<LOGF>) {
+			#Agregamos al arreglo y mandamos a la función
+			chomp $_;
+			if ($_ =~ /imapd: LOGIN/){
+				push @registros, $_;
+			}
+		}
+		close(LOGF);
+		analisis(@registros);
+		#print REGLOG "$fechaGlobal Se ha pausado el servicio\n";
+		close REGLOG ;
+		sleep($time);
 	}
-	close(LOGF);
-	analisis(@registros);
-	print REGLOG "$fechaGlobal Se ha pausado el servicio\n";
-	close REGLOG ;
-	sleep($time);
+}else{
+	print "El servicio no se encuentra habilitado en el archivo de configuración\n";
 }
