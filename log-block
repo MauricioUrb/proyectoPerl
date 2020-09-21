@@ -18,7 +18,7 @@ case "$1" in
     echo "Start Successfull
     ;;
   stop)
-    echo "Stopping Foo..."
+    echo "Stopping log-block"
     sudo perl log-block.pl.pl stop
     echo "Stopped Successfull"
     sleep 2
