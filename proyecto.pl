@@ -24,83 +24,44 @@ $filter   = $config->{courierPop}{filter};
 $attempts = $config->{courierPop}{attempts};
 $time 	  = $config->{courierPop}{time};
 
-=begin comment
+#Pruebas
+@registros = ("Jan 06 09:18:17 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
+"Jul 10 10:08:22 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
+"Jul 10 10:08:22 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
+"Jul 10 10:08:32 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
+"Jul 10 10:08:42 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
+"Aug 01 20:18:06 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:168.224.5.1], port=[50262], protocol=IMAP",
+"Aug 01 20:18:16 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:168.224.5.1], port=[50262], protocol=IMAP",
+"Aug 01 20:18:26 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:168.224.5.1], port=[50262], protocol=IMAP",
+"Aug 01 20:18:36 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:168.224.5.1], port=[50262], protocol=IMAP",
+"Sep 19 19:28:37 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:192.168.0.1], port=[50262], protocol=IMAP",
+"Sep 19 19:28:47 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:192.168.0.1], port=[50262], protocol=IMAP",
+);
 
-print $logFile,"\n";
-print $enable,"\n";
-print $log,"\n";
-print $filter,"\n";
-print $attempts,"\n";
-print $time,"\n";
-
-=cut
-
-sub ordenFecha {
-	@tmpTime = split(/\s/,$_[0]);
-	@tmpHora = split(/:/,$tmpTime[2]);
-	if ($tmpTime[0] eq "Jan" ){
-		$tmpTime[0] = 1;
-	} elsif ($tmpTime[0] eq "Feb" ){
-		$tmpTime[0] = 2;
-	} elsif ($tmpTime[0] eq "Mar" ){
-		$tmpTime[0] = 3;
-	} elsif ($tmpTime[0] eq "Apr" ){
-		$tmpTime[0] = 4;
-	} elsif ($tmpTime[0] eq "May" ){
-		$tmpTime[0] = 5;
-	} elsif ($tmpTime[0] eq "Jun" ){
-		$tmpTime[0] = 6;
-	} elsif ($tmpTime[0] eq "Jul" ){
-		$tmpTime[0] = 7;
-	} elsif ($tmpTime[0] eq "Aug" ){
-		$tmpTime[0] = 8;
-	} elsif ($tmpTime[0] eq "Sep" ){
-		$tmpTime[0] = 9;
-	} elsif ($tmpTime[0] eq "Oct" ){
-		$tmpTime[0] = 10;
-	} elsif ($tmpTime[0] eq "Nov" ){
-		$tmpTime[0] = 11;
-	} elsif ($tmpTime[0] eq "Dec" ){
-		$tmpTime[0] = 12;
-	}
-	@n_Formato = ($tmpTime[0], $tmpTime[1],$tmpHora[0],$tmpHora[1],$tmpHora[2]);
-	foreach my $dato (@n_Formato) {
-		if (length($dato) eq 1){
-			$dato = "0" . $dato;
-		}
-	}
-	my $fechaN = join("",@n_Formato);
-	return $fechaN;
-}
-
-($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-@hoy = ($mon + 1,$mday,$hour,$min,$sec);
-foreach my $dato (@hoy) {
-	if (length($dato) eq 1){
-		$dato = "0" . $dato;
+foreach $registro (@registros){
+	$registro =~ m#([A-Z][a-z]+ \d+ \d+:\d+:\d+).*\[(.*:\d+\.\d+\.\d+\.\d+)\]#;
+	#$1 -> Fecha
+	#$2 -> IP
+	unless(exists($hosts{"$2"})){
+		$hosts{"$2"} = epoch($1);
+	}else{
+		$valor = $hosts{"$2"};
+		$hosts{"$2"} = "$valor ".epoch($1);
 	}
 }
-$fechaHoy = join("",@hoy);
-#print $fechaHoy,"\n\n\n";
-$omitir = 1;
-=begim comment
-# Pruebas de comparar fechas
-$Fleer = "Sep 19 19:28:37";
-$Fleer = ordenFecha($Fleer);
-print "$Fleer\t$fechaHoy\n";
-#Primero se compara fecha
-if (int($Fleer) >= int($fechaHoy)){
-	print "ok\n";
+
+sub epoch{
+	$fecha = shift;
+	@months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+	$fecha =~ m#([A-Z][a-z]+) (\d+) (\d+):(\d+):(\d+)#;
+	$index = first_index { $_ eq $1 } @months;
+	#$sec,$min,$hour,$mday,$mon,$year
+	return timegm($5,$4,$3,$2,$index,2020);
 }
 
-$Fleer = "Nov 9 9:8:7";
-$Fleer = ordenFecha($Fleer);
-print "$Fleer\t$fechaHoy\n";
-#Primero se compara fecha
-if (int($Fleer) >= int($fechaHoy)){
-	print "ok\n";
-}
-=cut
+
+#Apertura de archivo de logs
+
 $archivoLogs = "/var/log/mail.log"; #También puede ser /var/log/mail.log.1 , no de qué dependa, al inicio fue en .1, cuando use telnet ya fue el mail.log :S
 #=begin comment
 open (LOGF, "<", $archivoLogs) or die $!;
