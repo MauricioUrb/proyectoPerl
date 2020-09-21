@@ -108,4 +108,3 @@ while(1){
 	close REGLOG ;
 	sleep($time);
 }
-
