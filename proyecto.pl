@@ -10,7 +10,6 @@ $config = Config::Tiny->read($archivoConf);
 $logFile  = $config->{courierPop_eq7}{log};
 $enable   = $config->{courierPop}{enable};
 $log 	  = $config->{courierPop}{log};
-$filter   = $config->{courierPop}{filter};
 $attempts = $config->{courierPop}{attempts};
 $time 	  = $config->{courierPop}{time};
 
@@ -66,7 +65,6 @@ sub bloqueo{
 
 #MAIN
 if($enable eq "yes"){
-	$archivoLogs = "/var/log/mail.log";
 	$fechaGlobal = "";
 	@months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
 	$globalYear = 0;
@@ -76,10 +74,10 @@ if($enable eq "yes"){
 		unless (-d "/var/log/courier-pop_eq7"){
 			system("sudo mkdir /var/log/courier-pop_eq7");
 			system("sudo chmod 777 /var/log/courier-pop_eq7");
-			system("sudo touch /var/log/courier-pop_eq7/courier-pop_eq7.log");
-			system("sudo chmod 777 /var/log/courier-pop_eq7/courier-pop_eq7.log");
+			system("sudo touch $logFile");
+			system("sudo chmod 777 $logFile");
 		}
-		open (REGLOG, ">>", "/var/log/courier-pop_eq7/courier-pop_eq7.log") or die $!;
+		open (REGLOG, ">>", $logFile) or die $!;
 		#Se calcula la fecha de hoy
 		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
 		$fechaGlobal = ($year+1900)." ".($mon+1)." ".$mday." ".$hour.":".$min.":".$sec;
@@ -87,7 +85,7 @@ if($enable eq "yes"){
 		$globalHour = $hour+5;
 		$globalMin = $min;
 		#print REGLOG "$fechaGlobal Se ha iniciado el servicio\n";
-		open (LOGF, "<", $archivoLogs) or die $!;
+		open (LOGF, "<", $log) or die $!;
 		# Se limpia el arreglo
 		@registros = ();
 		#Apertura de archivo de logs
