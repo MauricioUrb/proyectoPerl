@@ -3,18 +3,6 @@
 use Config::Tiny;
 use Time::Local;
 use List::MoreUtils qw(first_index);
-use Data::Dumper;
-
-=begin comment
-^\w{3} [ :0-9]{11} [._[:alnum:]-]+ courierpop3login: (Connection|Disconnected), ip=\[[.:[:alnum:]]+\]$
-^\w{3} [ :0-9]{11} [._[:alnum:]-]+ courierpop3login: LOGIN, user=[-_.@[:alnum:]]+, ip=\[[.:[:alnum:]]+\], port=\[[0-9]+\]$
-^\w{3} [ :0-9]{11} [._[:alnum:]-]+ courierpop3login: (LOGOUT|TIMEOUT|DISCONNECTED), user=[-_.@[:alnum:]]+, ip=\[[.:[:alnum:]]+\], port=\[[0-9]+\], top=[0-9]+, retr=[0-9]+, rcvd=[0-9]+, sent=[0-9]+, time=[0-9]+(, stls=1)?$
-
-
-Sep 19 19:28:36 malware-virtual-machine imapd: Connection, ip=[::ffff:127.0.0.1]
-Sep 19 19:28:37 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP
-Sep 19 19:28:37 malware-virtual-machine imapd: LOGOUT, user=mauricio, ip=[::ffff:127.0.0.1], headers=184, body=0, rcvd=294, sent=1364, time=0
-=cut
 
 $archivoConf = "courier-pop_eq7.conf";
 $config = Config::Tiny->read($archivoConf);
@@ -26,58 +14,28 @@ $filter   = $config->{courierPop}{filter};
 $attempts = $config->{courierPop}{attempts};
 $time 	  = $config->{courierPop}{time};
 
-=begin comment
-#Pruebas
-@registros = ("Jan 06 09:18:17 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
-"Jul 10 10:08:22 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
-"Jul 10 10:08:22 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
-"Jul 10 10:08:32 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
-"Jul 10 10:08:42 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
-"Aug 01 20:18:06 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:168.224.5.1], port=[50262], protocol=IMAP",
-"Aug 01 20:18:16 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:168.224.5.1], port=[50262], protocol=IMAP",
-"Aug 01 20:18:26 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:168.224.5.1], port=[50262], protocol=IMAP",
-"Aug 01 20:18:36 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:168.224.5.1], port=[50262], protocol=IMAP",
-"Sep 19 19:28:37 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:192.168.0.1], port=[50262], protocol=IMAP",
-"Sep 19 19:28:47 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:192.168.0.1], port=[50262], protocol=IMAP",
-);
-=cut
-$fechaGlobal = "";
-
 sub analisis {
 	%hosts = ();
 	foreach $registro (@_){
 		$registro =~ m#([A-Z][a-z]+ \d+ \d+:\d+:\d+).*\[(.*:\d+\.\d+\.\d+\.\d+)\]#;
 		#$1 -> Fecha
 		#$2 -> IP
-		#print epoch($1), "->", (time - $time), "\n";
-		#if(epoch($1) >= time - $time){
+		$horaReg = epoch($1) + (3600 * 5);
+		if($horaReg >= (time - $time) && time >= $horaReg ){
 			unless(exists($hosts{"$2"})){
 				$hosts{"$2"} = epoch($1);
 			}else{
 				$valor = $hosts{"$2"};
 				$hosts{"$2"} = "$valor ".epoch($1);
 			}
-		#}
+		}
 	}
 
 	foreach $key (keys %hosts){
 		@fechas = split " ", $hosts{$key};
 		$size = scalar @fechas;
-		if($size > 1){
-			foreach $fecha (@fechas){
-				if($fecha-$time <= $fechaAnterior){
-					$contadorAttemps ++;
-					if($contadorAttemps == $attempts){
-						bloqueo($key);
-						print "Bloqueado $key\n";
-						$contadorAttemps = 0;
-						last;
-					}
-				}else{
-					$contadorAttemps = 0;
-				}
-				$fechaAnterior = $fecha;
-			}
+		if($size >= $attempts){
+			bloqueo($key);
 		}
 	}
 }
@@ -91,62 +49,63 @@ sub epoch{
 }
 
 sub bloqueo{
-	unless (-d "/var/log/courier-pop_eq7"){
-		mkdir "/var/log/courier-pop_eq7";
-	}
-	open (REGLOG, "+>>", "/var/log/courier-pop_eq7/courier-pop_eq7.log");
 	$ip = shift;
 	$ip =~ m#(.*):(\d+\.\d+\.\d+\.\d+)#;
 	#$1 -> IPv6
 	#$2 -> IPv4
-	$block_ipv6 = `sudo iptables -A INPUT -s $1 -j DROP`;
-	$block_ipv4 = `sudo iptables -A INPUT -s $2 -j DROP`;
-	$save = `sudo /sbin/iptables-save`;
-	print REGLOG "$fechaGlobal  Se bloqueó la ip: $ip\n";
-	close REGLOG ;
+	$check_ipv6 = `sudo ip6tables -C INPUT -s $1 -j DROP`;
+	$check_ipv4 = `sudo iptables -C INPUT -s $2 -j DROP`;
+	unless($check_ipv6 or $check_ipv4){
+		$block_ipv6 = `sudo ip6tables -A INPUT -s $1 -j DROP`;
+		$save_ipv6 = `sudo /sbin/ip6tables-save`;
+		$block_ipv4 = `sudo iptables -A INPUT -s $2 -j DROP`;
+		$save_ipv4 = `sudo /sbin/iptables-save`;
+		print "$fechaGlobal  Se bloqueó la ip: $ip\n";
+		print REGLOG "$fechaGlobal  Se bloqueó la ip: $ip\n";
+	}
 }
 
 ################################################################################################################################
 
+#MAIN
 
 $archivoLogs = "/var/log/mail.log"; #También puede ser /var/log/mail.log.1 , no de qué dependa, al inicio fue en .1, cuando use telnet ya fue el mail.log :S
+#$archivoLogs = $ARGV[0];
+$fechaGlobal = "";
 @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
-#=begin comment
 $globalYear = 0;
+$globalHour = 0;
+$globalMin = 0;
 while(1){
+	unless (-d "/var/log/courier-pop_eq7"){
+		system("sudo mkdir /var/log/courier-pop_eq7");
+		system("sudo chmod 777 /var/log/courier-pop_eq7");
+		system("sudo touch /var/log/courier-pop_eq7/courier-pop_eq7.log");
+		system("sudo chmod 777 /var/log/courier-pop_eq7/courier-pop_eq7.log");
+	}
+	open (REGLOG, ">>", "/var/log/courier-pop_eq7/courier-pop_eq7.log") or die $!;
 	#Se calcula la fecha de hoy
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
 	$fechaGlobal = ($year+1900)." ".($mon+1)." ".$mday." ".$hour.":".$min.":".$sec;
 	$globalYear = $year+1900;
+	$globalHour = $hour;
+	$globalMin = $min;
+	print REGLOG "$fechaGlobal Se ha iniciado el servicio\n";
 	open (LOGF, "<", $archivoLogs) or die $!;
 	# Se limpia el arreglo
 	@registros = ();
-	#open(CONTADOR, "<", "contador.txt");
-	#chomp($ultimoRegistro = <CONTADOR>);
-	#close CONTADOR;
 	#Apertura de archivo de logs
 	while (<LOGF>) {
-		#$contador ++;
-		#if($contador > $ultimoRegistro){
-			#Agregamos al arreglo y mandamos a la función
-		<LOGF> =~ m#([A-Z][a-z]+ \d+ \d+:\d+:\d+).*\[(.*:\d+\.\d+\.\d+\.\d+)\]#;
-		print epoch($1), "-",time - $time ,"\n";
-		print "$1\n$fechaGlobal\n";
-		if(epoch($1) >= time){
-			chomp $_;
+		#Agregamos al arreglo y mandamos a la función
+		chomp $_;
+		if ($_ =~ /imapd: LOGIN/){
 			push @registros, $_;
 		}
 	}
-	for $registro (@registros){
-	
-		print "$registro\n";
-	}
 	close(LOGF);
 	analisis(@registros);
-	#$ultimoRegistro = $contador;
-	#open(CONTADOR, "+>", "contador.txt");
-	#print CONTADOR $ultimoRegistro;
-	#close CONTADOR;
-	exit;
+	print REGLOG "$fechaGlobal Se ha pausado el servicio\n";
+	close REGLOG ;
+	sleep($time);
 }
-#=cut
+
