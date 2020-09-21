@@ -49,11 +49,13 @@ sub analisis {
 		$registro =~ m#([A-Z][a-z]+ \d+ \d+:\d+:\d+).*\[(.*:\d+\.\d+\.\d+\.\d+)\]#;
 		#$1 -> Fecha
 		#$2 -> IP
-		unless(exists($hosts{"$2"})){
-			$hosts{"$2"} = epoch($1);
-		}else{
-			$valor = $hosts{"$2"};
-			$hosts{"$2"} = "$valor ".epoch($1);
+		if(epoch($1) >= (time - $time) && time > epoch($1)){
+			unless(exists($hosts{"$2"})){
+				$hosts{"$2"} = epoch($1);
+			}else{
+				$valor = $hosts{"$2"};
+				$hosts{"$2"} = "$valor ".epoch($1);
+			}
 		}
 	}
 
@@ -81,18 +83,17 @@ sub analisis {
 
 sub epoch{
 	$fecha = shift;
-	@months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
 	$fecha =~ m#([A-Z][a-z]+) (\d+) (\d+):(\d+):(\d+)#;
 	$index = first_index { $_ eq $1 } @months;
 	#$sec,$min,$hour,$mday,$mon,$year
-	return timegm($5,$4,$3,$2,$index,2020);
+	return timegm($5,$4,$3,$2,$index,$globalYear);
 }
 
 sub bloqueo{
 	unless (-d "/var/log/courier-pop_eq7"){
 		mkdir "/var/log/courier-pop_eq7";
 	}
-	open (REGLOG, "+>>", "/var/log/courier-pop_eq7/courier-pop_eq7.log")
+	open (REGLOG, "+>>", "/var/log/courier-pop_eq7/courier-pop_eq7.log");
 	$ip = shift;
 	$ip =~ m#(.*):(\d+\.\d+\.\d+\.\d+)#;
 	#$1 -> IPv6
@@ -101,86 +102,28 @@ sub bloqueo{
 	$block_ipv4 = `sudo iptables -A INPUT -s $2 -j DROP`;
 	$save = `sudo /sbin/iptables-save`;
 	print REGLOG "$fechaGlobal  Se bloqueó la ip: $ip\n";
-	close(REGLOG)
-}
-
-
-sub ordenFecha {
-	@tmpTime = split(/\s/,$_[0]);
-	@tmpHora = split(/:/,$tmpTime[2]);
-	if ($tmpTime[0] eq "Jan" ){
-		$tmpTime[0] = 1;
-	} elsif ($tmpTime[0] eq "Feb" ){
-		$tmpTime[0] = 2;
-	} elsif ($tmpTime[0] eq "Mar" ){
-		$tmpTime[0] = 3;
-	} elsif ($tmpTime[0] eq "Apr" ){
-		$tmpTime[0] = 4;
-	} elsif ($tmpTime[0] eq "May" ){
-		$tmpTime[0] = 5;
-	} elsif ($tmpTime[0] eq "Jun" ){
-		$tmpTime[0] = 6;
-	} elsif ($tmpTime[0] eq "Jul" ){
-		$tmpTime[0] = 7;
-	} elsif ($tmpTime[0] eq "Aug" ){
-		$tmpTime[0] = 8;
-	} elsif ($tmpTime[0] eq "Sep" ){
-		$tmpTime[0] = 9;
-	} elsif ($tmpTime[0] eq "Oct" ){
-		$tmpTime[0] = 10;
-	} elsif ($tmpTime[0] eq "Nov" ){
-		$tmpTime[0] = 11;
-	} elsif ($tmpTime[0] eq "Dec" ){
-		$tmpTime[0] = 12;
-	}
-	@n_Formato = ($tmpTime[0], $tmpTime[1],$tmpHora[0],$tmpHora[1],$tmpHora[2]);
-	foreach my $dato (@n_Formato) {
-		if (length($dato) eq 1){
-			$dato = "0" . $dato;
-		}
-	}
-	my $fechaN = join("",@n_Formato);
-	return $fechaN;
+	close REGLOG ;
 }
 
 ################################################################################################################################
 
 
 $archivoLogs = "/var/log/mail.log"; #También puede ser /var/log/mail.log.1 , no de qué dependa, al inicio fue en .1, cuando use telnet ya fue el mail.log :S
+@months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
 #=begin comment
+$globalYear = 0;
 while(1){
 	#Se calcula la fecha de hoy
 	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-	@hoy = ($mon + 1,$mday,$hour,$min,$sec);
-	foreach my $dato (@hoy) {
-		if (length($dato) eq 1){
-			$dato = "0" . $dato;
-		}
-	}
-	$fechaHoy = join("",@hoy);
-	$fechaGlobal = $mon + 1 . " " . $mday . " " . $hour . ":" . $min . ":" . $sec;
-	$omitir = 1;
-	sleep($time);
+	$fechaGlobal = ($year+1900)." ".($mon+1)." ".$mday." ".$hour.":".$min.":".$sec;
+	$globalYear = $year+1900;
 	open (LOGF, "<", $archivoLogs) or die $!;
 	# Se limpia el arreglo
 	@registros = ();
 	#Apertura de archivo de logs
 	while (<LOGF>) {
-		#Se obtien la fecha y hora del log
-		$Fleer = substr $_, 0, 15;
-		$Fleer = ordenFecha($Fleer);
-		if ($omitir){
-			#Primero se compara fecha
-			if (int($Fleer) >= int($fechaHoy)){
-				#Si se llega al punto en donde las fechas ya son válidas, entonces omitimos estas comparaciones
-				$omitir = 0;
-			} else {
-				#Mientras las fechas sean menores, seguimos omitiendo las líneas
-				next;
-			}
-		}
 		#Agregamos al arreglo y mandamos a la función
-		chop $_;
+		chomp $_;
 		push @registros, $_;
 	}
 	close(LOGF);
