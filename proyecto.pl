@@ -26,6 +26,8 @@ $filter   = $config->{courierPop}{filter};
 $attempts = $config->{courierPop}{attempts};
 $time 	  = $config->{courierPop}{time};
 
+open(L, '>', "$logFile");
+
 =begin comment
 #Pruebas
 @registros = ("Jan 06 09:18:17 malware-virtual-machine imapd: LOGIN, user=mauricio, ip=[::ffff:127.0.0.1], port=[50262], protocol=IMAP",
@@ -69,6 +71,7 @@ sub analisis {
 					if($contadorAttemps == $attempts){
 						bloqueo($key);
 						print "Bloqueado $key\n";
+						print L "Bloqeado $key" . localtime();
 						$contadorAttemps = 0;
 						last;
 					}
@@ -113,6 +116,7 @@ $archivoLogs = "/var/log/mail.log"; #También puede ser /var/log/mail.log.1 , no
 #=begin comment
 $globalYear = 0;
 if ($ARGV[$#ARGV] eq "start"){
+	print L "Se inicia servicio" . localtime();
 	while(1){
 	#Se calcula la fecha de hoy
 		($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
@@ -132,5 +136,6 @@ if ($ARGV[$#ARGV] eq "start"){
 	}
 } elsif($ARGV[$#ARGV] =~ /\d+/{
 	print `sudo iptables -D INPUT -s $ARGV[$#ARGV] -j DROP`;
+	print L "Desbloqeado $ARGV[$#ARGV]" . localtime();
 }
 #=cut
